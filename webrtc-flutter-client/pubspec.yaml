@@ -1,0 +1,80 @@
+name: nft
+description: Flutter Template
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.3.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^0.1.2
+  bflutter:
+    git:
+      url: git://github.com/beesightsoft/bflutter
+
+  cached_network_image: ^2.0.0-rc.1
+  dio: ^3.0.9
+  appcenter:
+    git:
+      url: git://github.com/nhancv/flutter_plugin_appcenter.git
+      path: src/appcenter
+  appcenter_crashes:
+    git:
+      url: git://github.com/nhancv/flutter_plugin_appcenter.git
+      path: src/appcenter_crashes
+  appcenter_analytics:
+    git:
+      url: git://github.com/nhancv/flutter_plugin_appcenter.git
+      path: src/appcenter_analytics
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.7.3
+  flutter_test:
+    sdk: flutter
+  build_runner: ^1.7.1
+
+flutter_icons:
+  image_path: "assets/base/icons/app_icon.png"
+  android: true # can specify file name here e.g. "ic_launcher"
+  ios: true # can specify file name here e.g. "My-Launcher-Icon"
+  image_path_android: "assets/base/icons/app_icon.png"
+  image_path_ios: "assets/base/icons/app_icon.png"
+  adaptive_icon_background: "assets/base/icons/app_icon.png" # only available for Android 8.0 devices and above
+  adaptive_icon_foreground: "assets/base/icons/app_icon.png" # only available for Android 8.0 devices and above
+# To Generate icon
+#  flutter pub get
+#  flutter pub run flutter_launcher_icons:main
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/base/icons/
+    - assets/base/fonts/
+    - assets/app/icons/
+    - assets/app/fonts/
+
+  fonts:
+    - family: SFProText
+      fonts:
+        - asset: assets/base/fonts/SFProText-Light.ttf
+          weight: 300
+        - asset: assets/base/fonts/SFProText-Regular.ttf
+          weight: 400
+        - asset: assets/base/fonts/SFProText-Medium.ttf
+          weight: 500
+        - asset: assets/base/fonts/SFProText-Semibold.ttf
+          weight: 600
+        - asset: assets/base/fonts/SFProText-Bold.ttf
+          weight: 700
+    - family: AvenirNextLTPro-Regular
+      fonts:
+        - asset: assets/base/fonts/AvenirNextLTPro-Regular.otf
+    - family: AvenirNextLTPro-Demi
+      fonts:
+        - asset: assets/base/fonts/AvenirNextLTPro-Demi.otf
+    - family: AvenirNextLTPro-Bold
+      fonts:
+        - asset: assets/base/fonts/AvenirNextLTPro-Bold.otf

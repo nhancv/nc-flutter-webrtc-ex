@@ -23,7 +23,7 @@
     "@nestjs/common": "^6.11.11",
     "@nestjs/core": "^6.11.11",
     "@nestjs/platform-express": "^6.11.11",
-    "@nestjs/platform-fastify": "^6.11.11",
+    "@nestjs/serve-static": "^2.1.0",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.0",
     "rxjs": "^6.5.4"

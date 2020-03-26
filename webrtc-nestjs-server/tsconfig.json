@@ -1,0 +1,21 @@
+{
+  "compilerOptions": { //https://www.typescriptlang.org/docs/handbook/compiler-options.html
+    "module": "commonjs",
+    "declaration": false,
+    "esModuleInterop": true,
+    "strict": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "target": "es2017", // es5
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node"],
+    "lib": ["es2015", "es2017", "dom"],
+    "pretty": false,
+    "incremental": true
+  },
+  "exclude": ["node_modules", "dist"]
+}

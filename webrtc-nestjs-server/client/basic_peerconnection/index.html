@@ -1,0 +1,70 @@
+<!--
+  ~ MIT License
+  ~
+  ~ Copyright (c) 2020 Nhan Cao
+  ~
+  ~ Permission is hereby granted, free of charge, to any person obtaining a copy
+  ~ of this software and associated documentation files (the "Software"), to deal
+  ~ in the Software without restriction, including without limitation the rights
+  ~ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  ~ copies of the Software, and to permit persons to whom the Software is
+  ~ furnished to do so, subject to the following conditions:
+  ~
+  ~ The above copyright notice and this permission notice shall be included in all
+  ~ copies or substantial portions of the Software.
+  ~
+  ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  ~ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  ~ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  ~ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  ~ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  ~ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  ~ SOFTWARE.
+  ~
+  -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="WebRTC code samples">
+  <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
+  <meta itemprop="description" content="Client-side WebRTC code samples">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta id="theme-color" name="theme-color" content="#ffffff">
+  <link href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css">
+  <!--  https://codelabs.developers.google.com/codelabs/webrtc-web-->
+  <title>Realtime communication with WebRTC</title>
+  <script src="lib/socket.io.js"></script>
+  
+  <link rel="stylesheet" href="css/main.css"/>
+</head>
+
+<body>
+<img src="logo.svg" width="100"/>
+<h1>Realtime communication with WebRTC</h1>
+
+<div id="container">
+  <video id="localVideo" playsinline autoplay muted></video>
+  <video id="remoteVideo" playsinline autoplay></video>
+  
+  <div class="box">
+    <button id="startButton">Start</button>
+    <button id="callButton">Call</button>
+    <button id="hangupButton">Hang Up</button>
+  </div>
+  
+  <div class="box">
+    <span>SDP Semantics:</span>
+    <select id="sdpSemantics">
+      <option selected value="">Default</option>
+      <option value="unified-plan">Unified Plan</option>
+      <option value="plan-b">Plan B</option>
+    </select>
+  </div>
+</div>
+</body>
+
+<script src="js/webrtc.js" async></script>
+
+</html>

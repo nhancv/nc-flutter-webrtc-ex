@@ -1,4 +1,5 @@
 import {
+  ConnectedSocket,
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -22,6 +23,7 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   
   private logger: Logger = new Logger('AppGateway');
   private clientList: any = {};
+  private roomList: any = [];
   
   afterInit(server: Server) {
     this.logger.log(`Init socket server ${server.path()}`);
@@ -30,6 +32,12 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
     delete this.clientList[client.id];
+    for (let i = 0; i < this.roomList.length; i++) {
+      if (this.roomList[i].host == client.id ||
+          this.roomList[i].peer == client.id) {
+        this.roomList.splice(i, 1);
+      }
+    }
   }
   
   handleConnection(client: Socket, ...args: any[]) {
@@ -39,25 +47,52 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     client.emit(CLIENT_ID_EVENT, client.id);
   }
   
+  findPeerId(hostId: string) {
+    for (let i = 0; i < this.roomList.length; i++) {
+      if (this.roomList[i].host == hostId) {
+        return this.roomList[i].peer;
+      }
+    }
+  }
+  
+  findHostId(peerId: string) {
+    for (let i = 0; i < this.roomList.length; i++) {
+      if (this.roomList[i].peer == peerId) {
+        return this.roomList[i].host;
+      }
+    }
+  }
+  
   @SubscribeMessage(OFFER_EVENT)
-  async onOfferEvent(@MessageBody() data: {calleeId: string, description: any}): Promise<number> {
+  async onOfferEvent(@ConnectedSocket() client: Socket, @MessageBody() data: { peerId: string, description: any }): Promise<number> {
     console.log(data);
-    this.clientList[data.calleeId].emit(OFFER_EVENT, data.description);
+    // @nhancv 3/30/20: Create a room contain client id with peerId;
+    this.roomList.push({host: client.id, peer: data.peerId});
+    this.clientList[data.peerId].emit(OFFER_EVENT, data.description);
     return 0;
   }
   
   @SubscribeMessage(ANSWER_EVENT)
-  async onAnswerEvent(@MessageBody() data: {calleeId: string, description: any}): Promise<number> {
+  async onAnswerEvent(@ConnectedSocket() client: Socket, @MessageBody() data: { description: any }): Promise<number> {
     console.log(data);
-    this.clientList[data.calleeId].emit(ANSWER_EVENT, data.description);
+    const hostId = this.findHostId(client.id);
+    this.clientList[hostId].emit(ANSWER_EVENT, data.description);
     return 0;
   }
   
   @SubscribeMessage(ICE_CANDIDATE_EVENT)
-  async onIceCandidateEvent(@MessageBody() data: {calleeId: string, candidate: any}): Promise<number> {
+  async onIceCandidateEvent(@ConnectedSocket() client: Socket, @MessageBody() data: {isHost: boolean, candidate: any }): Promise<number> {
     console.log(data);
-    this.clientList[data.calleeId].emit(ANSWER_EVENT, data.candidate);
+    let clientId;
+    if(data.isHost) {
+      clientId = this.findPeerId(client.id);
+    } else {
+      clientId = this.findHostId(client.id);
+    }
+    this.clientList[clientId].emit(ICE_CANDIDATE_EVENT, data.candidate);
     return 0;
   }
+  
+  
   
 }

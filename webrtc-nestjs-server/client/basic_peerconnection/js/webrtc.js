@@ -177,8 +177,10 @@ function onSetSessionDescriptionError(error) {
 }
 
 function gotRemoteStream(e) {
-  if (remoteVideo.srcObject !== e.streams[0]) {
-    remoteVideo.srcObject = e.streams[0];
+  const remoteStream = e.streams[0];
+  if (remoteVideo.srcObject !== remoteStream) {
+    remoteVideo.srcObject = remoteStream;
+    remoteStream.getTracks().forEach(track => pc2.addTrack(track, remoteStream));
     console.log('pc2 received remote stream');
   }
 }

@@ -30,6 +30,17 @@ const calleeIdInput = document.getElementById('calleeIdInput');
 const startButton = document.getElementById('startButton');
 const callButton = document.getElementById('callButton');
 const hangupButton = document.getElementById('hangupButton');
+const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
+
+const offerOptions = {
+  offerToReceiveAudio: 1,
+  offerToReceiveVideo: 1
+};
+let startTime;
+let localStream;
+let peerConnection;
+
 // @nhancv 3/30/20: Init state
 startButton.disabled = true;
 calleeIdInput.disabled = true;
@@ -56,34 +67,82 @@ const ICE_CANDIDATE_EVENT = 'ice-candidate-event';
 let currentClientId = null;
 let calleeId = null;
 
-const socket = io('http://localhost:3000');
+const socket = io('http://192.168.1.128:3000');
+// const socket = io('http://localhost:3000');
 socket.on('connect', function () {
   console.log('Connected');
   // @nhancv 3/30/20: Enable Start button
   startButton.disabled = false;
   
-  // socket.emit('message', 'hello');
-  // socket.emit('events', {test: 'test'});
-  // socket.emit('identity', 0, response =>
-  //     console.log('Identity:', response),
-  // );
-  
+  // @nhancv 3/30/20: Socket event setup
   socket.on(CLIENT_ID_EVENT, function (_clientId) {
     console.log(CLIENT_ID_EVENT, _clientId);
     currentClientId = _clientId;
     clientIdP.innerHTML = `Client ID: ${_clientId}`;
   });
   
-  socket.on(OFFER_EVENT, function (description) {
+  socket.on(OFFER_EVENT, async (description) => {
     console.log(OFFER_EVENT, description);
+    
+    // @nhancv 3/30/20: Create new PeerConnection
+    startTime = window.performance.now();
+    const videoTracks = localStream.getVideoTracks();
+    const audioTracks = localStream.getAudioTracks();
+    if (videoTracks.length > 0) {
+      console.log(`Using video device: ${videoTracks[0].label}`);
+    }
+    if (audioTracks.length > 0) {
+      console.log(`Using audio device: ${audioTracks[0].label}`);
+    }
+    peerConnection = new RTCPeerConnection({});
+    console.log('Created remote peer connection object ' + currentClientId);
+    peerConnection.addEventListener('icecandidate', e => onIceCandidate(e));
+    peerConnection.addEventListener('iceconnectionstatechange', e => onIceStateChange(e));
+    peerConnection.addEventListener('track', gotRemoteStream);
+    
+    // Set remote offer
+    console.log(currentClientId + ' setRemoteDescription start');
+    try {
+      await peerConnection.setRemoteDescription(description);
+      onSetRemoteSuccess(peerConnection);
+    } catch (e) {
+      onSetSessionDescriptionError();
+    }
+    
+    console.log(currentClientId + ' createAnswer start');
+    // Since the 'remote' side has no media stream we need
+    // to pass in the right constraints in order for it to
+    // accept the incoming offer of audio and video.
+    try {
+      const answer = await peerConnection.createAnswer();
+      await onCreateAnswerSuccess(answer);
+      // @nhancv 3/30/20: Send answer to callee
+      emitAnswerEvent(calleeId, answer);
+    } catch (e) {
+      onCreateSessionDescriptionError(e);
+    }
   });
   
-  socket.on(ANSWER_EVENT, function (description) {
-    console.log(CLIENT_ID_EVENT, description);
+  socket.on(ANSWER_EVENT, async (description) => {
+    console.log(ANSWER_EVENT, description);
+    console.log(currentClientId + ' setRemoteDescription start');
+    try {
+      await peerConnection.setRemoteDescription(description);
+      onSetRemoteSuccess(peerConnection);
+    } catch (e) {
+      onSetSessionDescriptionError(e);
+    }
   });
   
-  socket.on(ICE_CANDIDATE_EVENT, function (candidate) {
-    console.log(CLIENT_ID_EVENT, candidate);
+  socket.on(ICE_CANDIDATE_EVENT, async (candidate) => {
+    console.log(ICE_CANDIDATE_EVENT, candidate);
+    try {
+      await peerConnection.addIceCandidate(candidate);
+      onAddIceCandidateSuccess();
+    } catch (e) {
+      onAddIceCandidateError(e);
+    }
+    console.log(`ICE candidate:\n${candidate ? candidate.candidate : '(null)'}`);
   });
   
   socket.on('exception', function (exception) {
@@ -96,21 +155,21 @@ socket.on('connect', function () {
   });
 });
 
-function emitOfferEvent({calleeId: string, description: any}) {
-  if(socket && socket.isConnected) {
-    socket.emit(OFFER_EVENT, {calleeId: string, description: any})
+function emitOfferEvent(peerId, description) {
+  if (socket && socket.connected) {
+    socket.emit(OFFER_EVENT, {peerId: peerId, description: description})
   }
 }
 
-function emitAnswerEvent({calleeId: string, description: any}) {
-  if(socket && socket.isConnected) {
-    socket.emit(ANSWER_EVENT, {calleeId: string, description: any})
+function emitAnswerEvent(peerId, description) {
+  if (socket && socket.connected) {
+    socket.emit(ANSWER_EVENT, {peerId: peerId, description: description})
   }
 }
 
-function emitIceCandidateEvent({calleeId: string, candidate: any}) {
-  if(socket && socket.isConnected) {
-    socket.emit(ICE_CANDIDATE_EVENT, {calleeId: string, candidate: any})
+function emitIceCandidateEvent(isHost, candidate) {
+  if (socket && socket.connected) {
+    socket.emit(ICE_CANDIDATE_EVENT, {isHost: isHost, candidate: candidate})
   }
 }
 
@@ -119,10 +178,6 @@ function emitIceCandidateEvent({calleeId: string, candidate: any}) {
 startButton.addEventListener('click', start);
 callButton.addEventListener('click', call);
 hangupButton.addEventListener('click', hangup);
-
-let startTime;
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
 
 localVideo.addEventListener('loadedmetadata', function () {
   console.log(`Local video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`);
@@ -143,41 +198,50 @@ remoteVideo.addEventListener('resize', () => {
   }
 });
 
-let localStream;
-let pc1;
-let pc2;
-const offerOptions = {
-  offerToReceiveAudio: 1,
-  offerToReceiveVideo: 1
-};
-
-function getName(pc) {
-  return (pc === pc1) ? 'pc1' : 'pc2';
-}
-
-function getOtherPc(pc) {
-  return (pc === pc1) ? pc2 : pc1;
-}
-
 async function start() {
   console.log('Requesting local stream');
   startButton.disabled = true;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
+    // Older browsers might not implement mediaDevices at all, so we set an empty object first
+    if (navigator.mediaDevices === undefined) {
+      navigator.mediaDevices = {};
+    }
+
+    // Some browsers partially implement mediaDevices. We can't just assign an object
+    // with getUserMedia as it would overwrite existing properties.
+    // Here, we will just add the getUserMedia property if it's missing.
+    if (navigator.mediaDevices.getUserMedia === undefined) {
+      navigator.mediaDevices.getUserMedia = function (constraints) {
+
+        // First get ahold of the legacy getUserMedia, if present
+        let getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia || navigator.msGetUserMedia;
+
+        // Some browsers just don't implement it - return a rejected promise with an error
+        // to keep a consistent interface
+        if (!getUserMedia) {
+          return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+        }
+
+        // Otherwise, wrap the call to the old navigator.getUserMedia with a Promise
+        return new Promise(function (resolve, reject) {
+          getUserMedia.call(navigator, constraints, resolve, reject);
+        });
+      }
+    }
+    
+    // const constraints = { audio: true, video: true };
+    // const constraints = {audio: true, video: {facingMode: "user"}};
+    const constraints = {audio: true, video: {facingMode: {exact: "environment"}}};
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     console.log('Received local stream');
     localVideo.srcObject = stream;
     localStream = stream;
     callButton.disabled = false;
     calleeIdInput.disabled = false;
   } catch (e) {
-    alert(`getUserMedia() error: ${e.name}`);
+    alert(`getUserMedia() error: ${e.message}`);
+    console.error(e);
   }
-}
-
-function getSelectedSdpSemantics() {
-  const sdpSemanticsSelect = document.querySelector('#sdpSemantics');
-  const option = sdpSemanticsSelect.options[sdpSemanticsSelect.selectedIndex];
-  return option.value === '' ? {} : {sdpSemantics: option.value};
 }
 
 async function call() {
@@ -197,24 +261,18 @@ async function call() {
   if (audioTracks.length > 0) {
     console.log(`Using audio device: ${audioTracks[0].label}`);
   }
-  const configuration = getSelectedSdpSemantics();
-  console.log('RTCPeerConnection configuration:', configuration);
-  pc1 = new RTCPeerConnection(configuration);
-  console.log('Created local peer connection object pc1');
-  pc1.addEventListener('icecandidate', e => onIceCandidate(pc1, e));
-  pc2 = new RTCPeerConnection(configuration);
-  console.log('Created remote peer connection object pc2');
-  pc2.addEventListener('icecandidate', e => onIceCandidate(pc2, e));
-  pc1.addEventListener('iceconnectionstatechange', e => onIceStateChange(pc1, e));
-  pc2.addEventListener('iceconnectionstatechange', e => onIceStateChange(pc2, e));
-  pc2.addEventListener('track', gotRemoteStream);
+  peerConnection = new RTCPeerConnection({});
+  console.log('Created local peer connection object ' + currentClientId);
+  peerConnection.addEventListener('icecandidate', e => onIceCandidate(e));
+  peerConnection.addEventListener('iceconnectionstatechange', e => onIceStateChange(e));
+  peerConnection.addEventListener('track', gotRemoteStream);
   
-  localStream.getTracks().forEach(track => pc1.addTrack(track, localStream));
-  console.log('Added local stream to pc1');
+  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  console.log('Added local stream to ' + currentClientId);
   
   try {
-    console.log('pc1 createOffer start');
-    const offer = await pc1.createOffer(offerOptions);
+    console.log(currentClientId + ' createOffer start');
+    const offer = await peerConnection.createOffer(offerOptions);
     await onCreateOfferSuccess(offer);
   } catch (e) {
     onCreateSessionDescriptionError(e);
@@ -226,45 +284,25 @@ function onCreateSessionDescriptionError(error) {
 }
 
 async function onCreateOfferSuccess(desc) {
-  console.log(`Offer from pc1\n${desc.sdp}`);
-  console.log('pc1 setLocalDescription start');
+  console.log(`Offer from ${currentClientId}\n${desc}`);
+  console.log(currentClientId + ' setLocalDescription start');
   try {
-    await pc1.setLocalDescription(desc);
-    onSetLocalSuccess(pc1);
+    await peerConnection.setLocalDescription(desc);
+    onSetLocalSuccess();
     // @nhancv 3/30/20: Send offer to callee
-    emitOfferEvent({calleeId: calleeId, description: desc});
+    emitOfferEvent(calleeId, desc);
   } catch (e) {
     onSetSessionDescriptionError();
   }
   
-  console.log('pc2 setRemoteDescription start');
-  try {
-    await pc2.setRemoteDescription(desc);
-    onSetRemoteSuccess(pc2);
-  } catch (e) {
-    onSetSessionDescriptionError();
-  }
-  
-  console.log('pc2 createAnswer start');
-  // Since the 'remote' side has no media stream we need
-  // to pass in the right constraints in order for it to
-  // accept the incoming offer of audio and video.
-  try {
-    const answer = await pc2.createAnswer();
-    await onCreateAnswerSuccess(answer);
-    // @nhancv 3/30/20: Send answer to callee
-    emitAnswerEvent({calleeId: calleeId, description: desc});
-  } catch (e) {
-    onCreateSessionDescriptionError(e);
-  }
 }
 
-function onSetLocalSuccess(pc) {
-  console.log(`${getName(pc)} setLocalDescription complete`);
+function onSetLocalSuccess() {
+  console.log(`peerConnection setLocalDescription complete`);
 }
 
-function onSetRemoteSuccess(pc) {
-  console.log(`${getName(pc)} setRemoteDescription complete`);
+function onSetRemoteSuccess() {
+  console.log(`peerConnection setRemoteDescription complete`);
 }
 
 function onSetSessionDescriptionError(error) {
@@ -272,64 +310,70 @@ function onSetSessionDescriptionError(error) {
 }
 
 function gotRemoteStream(e) {
-  if (remoteVideo.srcObject !== e.streams[0]) {
-    remoteVideo.srcObject = e.streams[0];
-    console.log('pc2 received remote stream');
+  const remoteStream = e.streams[0];
+  if (remoteVideo.srcObject !== remoteStream) {
+    remoteVideo.srcObject = remoteStream;
+    remoteStream.getTracks().forEach(track => peerConnection.addTrack(track, remoteStream));
+    console.log('peerConnection received remote stream');
   }
 }
 
 async function onCreateAnswerSuccess(desc) {
-  console.log(`Answer from pc2:\n${desc.sdp}`);
-  console.log('pc2 setLocalDescription start');
+  console.log(`Answer from ${currentClientId}:\n${desc}`);
+  console.log(currentClientId + ' setLocalDescription start');
   try {
-    await pc2.setLocalDescription(desc);
-    onSetLocalSuccess(pc2);
-  } catch (e) {
-    onSetSessionDescriptionError(e);
-  }
-  console.log('pc1 setRemoteDescription start');
-  try {
-    await pc1.setRemoteDescription(desc);
-    onSetRemoteSuccess(pc1);
+    await peerConnection.setLocalDescription(desc);
+    onSetLocalSuccess();
   } catch (e) {
     onSetSessionDescriptionError(e);
   }
 }
 
-async function onIceCandidate(pc, event) {
+async function onIceCandidate(event) {
   try {
-    await (getOtherPc(pc).addIceCandidate(event.candidate));
-    onAddIceCandidateSuccess(pc);
     // @nhancv 3/30/20: Send ice Candidate
-    emitIceCandidateEvent({calleeId: calleeId, candidate: event.candidate});
+    emitIceCandidateEvent(!(calleeId == null), event.candidate);
+    onAddIceCandidateSuccess();
   } catch (e) {
-    onAddIceCandidateError(pc, e);
+    onAddIceCandidateError(e);
   }
-  console.log(`${getName(pc)} ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
+  console.log(`peerConnection ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
 }
 
-function onAddIceCandidateSuccess(pc) {
-  console.log(`${getName(pc)} addIceCandidate success`);
+function onAddIceCandidateSuccess() {
+  console.log(`peerConnection addIceCandidate success`);
 }
 
-function onAddIceCandidateError(pc, error) {
-  console.log(`${getName(pc)} failed to add ICE Candidate: ${error.toString()}`);
+function onAddIceCandidateError(error) {
+  console.log(`peerConnection failed to add ICE Candidate: ${error.toString()}`);
 }
 
-function onIceStateChange(pc, event) {
-  if (pc) {
-    console.log(`${getName(pc)} ICE state: ${pc.iceConnectionState}`);
+function onIceStateChange(event) {
+  if (peerConnection) {
+    console.log(`peerConnection ICE state: ${peerConnection.iceConnectionState}`);
     console.log('ICE state change event: ', event);
+    if (peerConnection.iceConnectionState === 'disconnected') {
+      peerConnection.close();
+      peerConnection = null;
+      remoteVideo.srcObject = null;
+      hangup();
+    }
   }
 }
 
 function hangup() {
   console.log('Ending call');
-  pc1.close();
-  pc2.close();
-  pc1 = null;
-  pc2 = null;
-  hangupButton.disabled = true;
-  callButton.disabled = false;
-  calleeIdInput.disabled = false;
+  try {
+    if (peerConnection) {
+      peerConnection.close();
+      peerConnection = null;
+    }
+    calleeId = null;
+    hangupButton.disabled = true;
+    callButton.disabled = false;
+    calleeIdInput.disabled = false;
+    remoteVideo.srcObject = null;
+  } catch (e) {
+    console.error(e);
+  }
 }

@@ -25,8 +25,15 @@
   <video id="remoteVideo" playsinline autoplay></video>
   
   <div class="box">
+    <p id="clientId"></p>
+  </div>
+  
+  <div class="box">
     <button id="startButton">Start</button>
-    <button id="callButton">Call</button>
+    <div style="display: inline;">
+      <input type="text" id="calleeIdInput" placeholder="Callee Id">
+      <button id="callButton">Call</button>
+    </div>
     <button id="hangupButton">Hang Up</button>
   </div>
   

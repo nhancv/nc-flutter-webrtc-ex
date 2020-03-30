@@ -1,5 +1,4 @@
 import {
-  ConnectedSocket,
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -7,12 +6,14 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
-  WsResponse,
 } from '@nestjs/websockets';
 import {Logger} from '@nestjs/common';
-import {from, Observable} from 'rxjs';
-import {map} from 'rxjs/operators';
 import {Server, Socket} from 'socket.io';
+
+const CLIENT_ID_EVENT = 'client-id-event';
+const OFFER_EVENT = 'offer-event';
+const ANSWER_EVENT = 'answer-event';
+const ICE_CANDIDATE_EVENT = 'ice-candidate-event';
 
 @WebSocketGateway()
 export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -20,29 +21,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   server: Server | undefined;
   
   private logger: Logger = new Logger('AppGateway');
-  
   private clientList: any = {};
   
-  @SubscribeMessage('webrtc-signaling')
-  handleEvent(@MessageBody() data: string): string {
-    console.log(data);
-    return 'ok';
-  }
-  
-  // @SubscribeMessage('events')
-  // findAll(@MessageBody() data: any): Observable<WsResponse<number>> {
-  //   console.log(data);
-  //   return from([1, 2, 3]).pipe(map(item => ({event: 'events', data: item})));
-  // }
-  //
-  // @SubscribeMessage('identity')
-  // async identity(@MessageBody() data: number): Promise<number> {
-  //   console.log(data);
-  //   return data;
-  // }
-  
   afterInit(server: Server) {
-    this.logger.log('Init');
+    this.logger.log(`Init socket server ${server.path()}`);
   }
   
   handleDisconnect(client: Socket) {
@@ -53,7 +35,29 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   handleConnection(client: Socket, ...args: any[]) {
     this.logger.log(`Client connected: ${client.id}`);
     this.clientList[client.id] = client;
-    client.emit('client-id', client.id);
+    // @nhancv 3/30/20: Send client id to client
+    client.emit(CLIENT_ID_EVENT, client.id);
+  }
+  
+  @SubscribeMessage(OFFER_EVENT)
+  async onOfferEvent(@MessageBody() data: {calleeId: string, description: any}): Promise<number> {
+    console.log(data);
+    this.clientList[data.calleeId].emit(OFFER_EVENT, data.description);
+    return 0;
+  }
+  
+  @SubscribeMessage(ANSWER_EVENT)
+  async onAnswerEvent(@MessageBody() data: {calleeId: string, description: any}): Promise<number> {
+    console.log(data);
+    this.clientList[data.calleeId].emit(ANSWER_EVENT, data.description);
+    return 0;
+  }
+  
+  @SubscribeMessage(ICE_CANDIDATE_EVENT)
+  async onIceCandidateEvent(@MessageBody() data: {calleeId: string, candidate: any}): Promise<number> {
+    console.log(data);
+    this.clientList[data.calleeId].emit(ANSWER_EVENT, data.candidate);
+    return 0;
   }
   
 }

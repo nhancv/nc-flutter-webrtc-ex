@@ -25,12 +25,97 @@
 
 'use strict';
 // https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/pc1
+const clientIdP = document.getElementById('clientId');
+const calleeIdInput = document.getElementById('calleeIdInput');
 const startButton = document.getElementById('startButton');
 const callButton = document.getElementById('callButton');
 const hangupButton = document.getElementById('hangupButton');
+// @nhancv 3/30/20: Init state
 startButton.disabled = true;
+calleeIdInput.disabled = true;
 callButton.disabled = true;
 hangupButton.disabled = true;
+
+///////////////////////////////////////////////////
+// Handle socket event
+// Connected to socket server and enable start button, otherwise disable it
+// Connect to server and receive an socket client id
+// Prepare local media
+// Create an offer and send a pair (callee id, offer description) to server
+// Server will forward that offer description to callee via id
+// Callee receive offer and generate answer and send a pair (caller id, answer description) to server
+// Server will forward that answer description to caller id
+// Caller receive answer, two peer continue exchange ice candidate information via socket server
+//
+
+const CLIENT_ID_EVENT = 'client-id-event';
+const OFFER_EVENT = 'offer-event';
+const ANSWER_EVENT = 'answer-event';
+const ICE_CANDIDATE_EVENT = 'ice-candidate-event';
+
+let currentClientId = null;
+let calleeId = null;
+
+const socket = io('http://localhost:3000');
+socket.on('connect', function () {
+  console.log('Connected');
+  // @nhancv 3/30/20: Enable Start button
+  startButton.disabled = false;
+  
+  // socket.emit('message', 'hello');
+  // socket.emit('events', {test: 'test'});
+  // socket.emit('identity', 0, response =>
+  //     console.log('Identity:', response),
+  // );
+  
+  socket.on(CLIENT_ID_EVENT, function (_clientId) {
+    console.log(CLIENT_ID_EVENT, _clientId);
+    currentClientId = _clientId;
+    clientIdP.innerHTML = `Client ID: ${_clientId}`;
+  });
+  
+  socket.on(OFFER_EVENT, function (description) {
+    console.log(OFFER_EVENT, description);
+  });
+  
+  socket.on(ANSWER_EVENT, function (description) {
+    console.log(CLIENT_ID_EVENT, description);
+  });
+  
+  socket.on(ICE_CANDIDATE_EVENT, function (candidate) {
+    console.log(CLIENT_ID_EVENT, candidate);
+  });
+  
+  socket.on('exception', function (exception) {
+    console.log('exception', exception);
+  });
+  socket.on('disconnect', function () {
+    console.log('Disconnected');
+    // @nhancv 3/30/20: Disable Start button
+    startButton.disabled = true;
+  });
+});
+
+function emitOfferEvent({calleeId: string, description: any}) {
+  if(socket && socket.isConnected) {
+    socket.emit(OFFER_EVENT, {calleeId: string, description: any})
+  }
+}
+
+function emitAnswerEvent({calleeId: string, description: any}) {
+  if(socket && socket.isConnected) {
+    socket.emit(ANSWER_EVENT, {calleeId: string, description: any})
+  }
+}
+
+function emitIceCandidateEvent({calleeId: string, candidate: any}) {
+  if(socket && socket.isConnected) {
+    socket.emit(ICE_CANDIDATE_EVENT, {calleeId: string, candidate: any})
+  }
+}
+
+
+///////////////////////////////////////////////////
 startButton.addEventListener('click', start);
 callButton.addEventListener('click', call);
 hangupButton.addEventListener('click', hangup);
@@ -39,11 +124,11 @@ let startTime;
 const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
 
-localVideo.addEventListener('loadedmetadata', function() {
+localVideo.addEventListener('loadedmetadata', function () {
   console.log(`Local video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`);
 });
 
-remoteVideo.addEventListener('loadedmetadata', function() {
+remoteVideo.addEventListener('loadedmetadata', function () {
   console.log(`Remote video videoWidth: ${this.videoWidth}px,  videoHeight: ${this.videoHeight}px`);
 });
 
@@ -83,6 +168,7 @@ async function start() {
     localVideo.srcObject = stream;
     localStream = stream;
     callButton.disabled = false;
+    calleeIdInput.disabled = false;
   } catch (e) {
     alert(`getUserMedia() error: ${e.name}`);
   }
@@ -95,7 +181,11 @@ function getSelectedSdpSemantics() {
 }
 
 async function call() {
+  // @nhancv 3/30/20: Save calleeID
+  calleeId = calleeIdInput.value;
+  // @nhancv 3/30/20: Update control status
   callButton.disabled = true;
+  calleeIdInput.disabled = true;
   hangupButton.disabled = false;
   console.log('Starting call');
   startTime = window.performance.now();
@@ -141,6 +231,8 @@ async function onCreateOfferSuccess(desc) {
   try {
     await pc1.setLocalDescription(desc);
     onSetLocalSuccess(pc1);
+    // @nhancv 3/30/20: Send offer to callee
+    emitOfferEvent({calleeId: calleeId, description: desc});
   } catch (e) {
     onSetSessionDescriptionError();
   }
@@ -160,6 +252,8 @@ async function onCreateOfferSuccess(desc) {
   try {
     const answer = await pc2.createAnswer();
     await onCreateAnswerSuccess(answer);
+    // @nhancv 3/30/20: Send answer to callee
+    emitAnswerEvent({calleeId: calleeId, description: desc});
   } catch (e) {
     onCreateSessionDescriptionError(e);
   }
@@ -206,6 +300,8 @@ async function onIceCandidate(pc, event) {
   try {
     await (getOtherPc(pc).addIceCandidate(event.candidate));
     onAddIceCandidateSuccess(pc);
+    // @nhancv 3/30/20: Send ice Candidate
+    emitIceCandidateEvent({calleeId: calleeId, candidate: event.candidate});
   } catch (e) {
     onAddIceCandidateError(pc, e);
   }
@@ -235,46 +331,5 @@ function hangup() {
   pc2 = null;
   hangupButton.disabled = true;
   callButton.disabled = false;
+  calleeIdInput.disabled = false;
 }
-
-// Handle socket event
-// Connected to socket server and enable start button, otherwise disable it
-// Connect to server and receive an socket client id
-// Prepare local media
-// Create an offer and send a pair (callee id, offer description) to server
-// Server will forward that offer description to callee via id
-// Callee receive offer and generate answer and send a pair (caller id, answer description) to server
-// Server will forward that answer description to caller id
-// Caller receive answer, two peer continue exchange ice candidate information via socket server
-//
-
-let clientId = null;
-const socket = io('http://localhost:3000');
-socket.on('connect', function () {
-  console.log('Connected');
-  // @nhancv 3/30/20: Enable Start button
-  startButton.disabled = false;
-  
-  // socket.emit('message', 'hello');
-  // socket.emit('events', {test: 'test'});
-  // socket.emit('identity', 0, response =>
-  //     console.log('Identity:', response),
-  // );
-  
-  socket.on('client-id', function (_clientId) {
-    console.log('client-id', _clientId);
-    clientId = _clientId;
-  });
-  
-  socket.on('events', function (data) {
-    console.log('event', data);
-  });
-  socket.on('exception', function (exception) {
-    console.log('exception', exception);
-  });
-  socket.on('disconnect', function () {
-    console.log('Disconnected');
-    // @nhancv 3/30/20: Disable Start button
-    startButton.disabled = true;
-  });
-});

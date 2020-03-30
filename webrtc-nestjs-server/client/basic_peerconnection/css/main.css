@@ -37,6 +37,7 @@ video {
     height: calc(var(--width) * 0.75);
     margin: 0 0 20px 0;
     vertical-align: top;
+    background: #222;
 }
 
 video#localVideo {

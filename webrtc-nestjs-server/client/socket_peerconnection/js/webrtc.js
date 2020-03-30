@@ -28,6 +28,7 @@
 const startButton = document.getElementById('startButton');
 const callButton = document.getElementById('callButton');
 const hangupButton = document.getElementById('hangupButton');
+startButton.disabled = true;
 callButton.disabled = true;
 hangupButton.disabled = true;
 startButton.addEventListener('click', start);
@@ -235,3 +236,45 @@ function hangup() {
   hangupButton.disabled = true;
   callButton.disabled = false;
 }
+
+// Handle socket event
+// Connected to socket server and enable start button, otherwise disable it
+// Connect to server and receive an socket client id
+// Prepare local media
+// Create an offer and send a pair (callee id, offer description) to server
+// Server will forward that offer description to callee via id
+// Callee receive offer and generate answer and send a pair (caller id, answer description) to server
+// Server will forward that answer description to caller id
+// Caller receive answer, two peer continue exchange ice candidate information via socket server
+//
+
+let clientId = null;
+const socket = io('http://localhost:3000');
+socket.on('connect', function () {
+  console.log('Connected');
+  // @nhancv 3/30/20: Enable Start button
+  startButton.disabled = false;
+  
+  // socket.emit('message', 'hello');
+  // socket.emit('events', {test: 'test'});
+  // socket.emit('identity', 0, response =>
+  //     console.log('Identity:', response),
+  // );
+  
+  socket.on('client-id', function (_clientId) {
+    console.log('client-id', _clientId);
+    clientId = _clientId;
+  });
+  
+  socket.on('events', function (data) {
+    console.log('event', data);
+  });
+  socket.on('exception', function (exception) {
+    console.log('exception', exception);
+  });
+  socket.on('disconnect', function () {
+    console.log('Disconnected');
+    // @nhancv 3/30/20: Disable Start button
+    startButton.disabled = true;
+  });
+});

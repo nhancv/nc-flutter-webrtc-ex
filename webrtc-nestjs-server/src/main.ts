@@ -4,7 +4,7 @@ import * as fs from 'fs';
 
 async function bootstrap() {
   
-  const usingHttps = false;
+  const usingHttps = true;
   const keyFile  = fs.readFileSync(__dirname + '/../keys/privatekey.pem');
   const certFile = fs.readFileSync(__dirname + '/../keys/certificate.pem');
   const app = await NestFactory.create(AppModule, usingHttps ? {

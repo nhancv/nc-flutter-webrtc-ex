@@ -67,7 +67,7 @@ const ICE_CANDIDATE_EVENT = 'ice-candidate-event';
 let currentClientId = null;
 let calleeId = null;
 
-const socket = io('http://192.168.1.128:3000');
+const socket = io('https://192.168.1.128:3000');
 // const socket = io('http://localhost:3000');
 socket.on('connect', function () {
   console.log('Connected');
@@ -214,7 +214,7 @@ async function start() {
       navigator.mediaDevices.getUserMedia = function (constraints) {
 
         // First get ahold of the legacy getUserMedia, if present
-        let getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia || navigator.msGetUserMedia;
+        let getUserMedia = navigator.mozGetUserMedia || navigator.webkitGetUserMedia || navigator.msGetUserMedia;
 
         // Some browsers just don't implement it - return a rejected promise with an error
         // to keep a consistent interface
@@ -230,8 +230,8 @@ async function start() {
     }
     
     // const constraints = { audio: true, video: true };
-    // const constraints = {audio: true, video: {facingMode: "user"}};
-    const constraints = {audio: true, video: {facingMode: {exact: "environment"}}};
+    const constraints = {audio: true, video: {facingMode: "user"}};
+    // const constraints = {audio: true, video: {facingMode: {exact: "environment"}}};
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     console.log('Received local stream');
     localVideo.srcObject = stream;

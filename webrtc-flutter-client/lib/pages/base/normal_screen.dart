@@ -23,7 +23,6 @@
  */
 
 import 'package:bflutter/libs/pair.dart';
-import 'package:nft/pages/search/search_screen.dart';
 import 'package:nft/utils/app_asset.dart';
 import 'package:nft/widgets/screen_widget.dart';
 import 'package:nft/widgets/sns_appbar.dart';
@@ -37,13 +36,9 @@ class NormalScreen extends StatelessWidget {
       body: Column(children: <Widget>[
         SnSIconAppBar(
           left: Pair(AppImages.icSearch, () {
-            Navigator.push(context,
-                CupertinoPageRoute(builder: (context) => SearchScreen()));
           }),
           center: 'Home',
           right: Pair(AppImages.icNoti, () {
-            Navigator.push(context,
-                CupertinoPageRoute(builder: (context) => SearchScreen()));
           }),
         ),
         Expanded(

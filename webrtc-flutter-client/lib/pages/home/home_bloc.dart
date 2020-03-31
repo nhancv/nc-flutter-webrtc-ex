@@ -29,28 +29,12 @@ import 'package:rxdart/rxdart.dart';
 
 /// Implement logic for Home screen
 class HomeBloc {
-  final getUserInfo = Bloc<String, UserDetail>();
-
-  final detailApi = DetailApi();
 
   HomeBloc() {
     _initLogic();
   }
 
   void _initLogic() {
-    getUserInfo.logic = (Observable<String> input) =>
-        input.asyncMap(detailApi.getUserInfo).asyncMap(
-          (data) {
-            return UserDetail.fromJson(data.data);
-          },
-        );
   }
 
-  void getHomeInfo() {
-    getUserInfo.push('nhancv');
-  }
-
-  void dispose() {
-    getUserInfo.dispose();
-  }
 }

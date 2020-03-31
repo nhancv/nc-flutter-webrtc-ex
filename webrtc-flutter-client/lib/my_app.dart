@@ -30,7 +30,7 @@ import 'package:bflutter/provider/main_bloc.dart';
 import 'package:bflutter/widgets/app_loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:nft/pages/login/login_screen.dart';
+import 'package:nft/pages/home/home_screen.dart';
 import 'package:nft/provider/i18n/app_localizations.dart';
 import 'package:nft/provider/store/store.dart';
 
@@ -103,8 +103,7 @@ class AppContent extends StatelessWidget {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: <Widget>[
-          LoginScreen(),
-//          HomeScreen(),
+          HomeScreen(),
           StreamBuilder(
             stream: mainBloc.appLoading.stream,
             builder: (context, snapshot) =>

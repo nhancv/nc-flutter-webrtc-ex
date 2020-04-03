@@ -22,15 +22,15 @@
  * SOFTWARE.
  */
 
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_webrtc/webrtc.dart';
 
-import 'random_string.dart';
-
 import '../../utils/device_info.dart';
-import '../../utils/websocket.dart';
 import '../../utils/turn.dart';
+import '../../utils/websocket.dart';
+import 'random_string.dart';
 
 enum SignalingState {
   CallStateNew,
@@ -61,11 +61,11 @@ class Signaling {
   var _sessionId;
   var _host;
   var _port = 3000;
-//  var _port = 8086;
   var _peerConnections = new Map<String, RTCPeerConnection>();
   var _dataChannels = new Map<String, RTCDataChannel>();
   var _remoteCandidates = [];
   var _turnCredential;
+  String calleeId;
 
   MediaStream _localStream;
   List<MediaStream> _remoteStreams;
@@ -157,28 +157,16 @@ class Signaling {
     });
   }
 
-  void onMessage(message) async {
-    Map<String, dynamic> mapData = message;
-    var data = mapData['data'];
+  void onMessage(tag, message) async {
+    JsonDecoder decoder = new JsonDecoder();
 
-    switch (mapData['type']) {
-      case 'peers':
+    switch (tag) {
+      case OFFER_EVENT:
         {
-          List<dynamic> peers = data;
-          if (this.onPeersUpdate != null) {
-            Map<String, dynamic> event = new Map<String, dynamic>();
-            event['self'] = _selfId;
-            event['peers'] = peers;
-            this.onPeersUpdate(event);
-          }
-        }
-        break;
-      case 'offer':
-        {
-          var id = data['from'];
-          var description = data['description'];
-          var media = data['media'];
-          var sessionId = data['session_id'];
+          var id = 'caller';
+          var description = message;
+          var media = 'call';
+          var sessionId = 'session_id';
           this._sessionId = sessionId;
 
           if (this.onStateChange != null) {
@@ -198,10 +186,10 @@ class Signaling {
           }
         }
         break;
-      case 'answer':
+      case ANSWER_EVENT:
         {
-          var id = data['from'];
-          var description = data['description'];
+          var id = 'callee';
+          var description = message;
 
           var pc = _peerConnections[id];
           if (pc != null) {
@@ -210,24 +198,42 @@ class Signaling {
           }
         }
         break;
-      case 'candidate':
+      case ICE_CANDIDATE_EVENT:
         {
-          var id = data['from'];
-          var candidateMap = data['candidate'];
-          var pc = _peerConnections[id];
-          RTCIceCandidate candidate = new RTCIceCandidate(
-              candidateMap['candidate'],
-              candidateMap['sdpMid'],
-              candidateMap['sdpMLineIndex']);
-          if (pc != null) {
-            await pc.addCandidate(candidate);
-          } else {
-            _remoteCandidates.add(candidate);
+          var id = 'caller';
+          var candidateMap = message;
+          if (candidateMap != null) {
+            var pc = _peerConnections[id];
+            RTCIceCandidate candidate = new RTCIceCandidate(
+                candidateMap['candidate'],
+                candidateMap['sdpMid'],
+                candidateMap['sdpMLineIndex']);
+            if (pc != null) {
+              await pc.addCandidate(candidate);
+            } else {
+              _remoteCandidates.add(candidate);
+            }
+          }
+        }
+        break;
+
+      case 'peers':
+        {
+          Map<String, dynamic> mapData = decoder.convert(message);
+          var data = mapData['data'];
+          List<dynamic> peers = data;
+          if (this.onPeersUpdate != null) {
+            Map<String, dynamic> event = new Map<String, dynamic>();
+            event['self'] = _selfId;
+            event['peers'] = peers;
+            this.onPeersUpdate(event);
           }
         }
         break;
       case 'leave':
         {
+          Map<String, dynamic> mapData = decoder.convert(message);
+          var data = mapData['data'];
           var id = data;
           var pc = _peerConnections.remove(id);
           _dataChannels.remove(id);
@@ -248,6 +254,8 @@ class Signaling {
         break;
       case 'bye':
         {
+          Map<String, dynamic> mapData = decoder.convert(message);
+          var data = mapData['data'];
           var to = data['to'];
           var sessionId = data['session_id'];
           print('bye: ' + sessionId);
@@ -286,7 +294,6 @@ class Signaling {
   }
 
   void connect() async {
-//    var url = 'https://$_host:$_port/ws';
     var url = 'http://$_host:$_port';
     _socket = SimpleWebSocket(url);
 
@@ -324,10 +331,9 @@ class Signaling {
       });
     };
 
-    _socket.onMessage = (message) {
-      print('Recivied data: ' + message);
-      JsonDecoder decoder = new JsonDecoder();
-      this.onMessage(decoder.convert(message));
+    _socket.onMessage = (tag, message) {
+      print('Recivied data: $tag - $message');
+      this.onMessage(tag, message);
     };
 
     _socket.onClose = (int code, String reason) {
@@ -346,7 +352,7 @@ class Signaling {
       'video': {
         'mandatory': {
           'minWidth':
-          '640', // Provide your own width, height and frame rate here
+              '640', // Provide your own width, height and frame rate here
           'minHeight': '480',
           'minFrameRate': '30',
         },
@@ -369,16 +375,12 @@ class Signaling {
     RTCPeerConnection pc = await createPeerConnection(_iceServers, _config);
     if (media != 'data') pc.addStream(_localStream);
     pc.onIceCandidate = (candidate) {
-      _send('candidate', {
-        'to': id,
-        'from': _selfId,
-        'candidate': {
-          'sdpMLineIndex': candidate.sdpMlineIndex,
-          'sdpMid': candidate.sdpMid,
-          'candidate': candidate.candidate,
-        },
-        'session_id': this._sessionId,
-      });
+      final iceCandidate = {
+        'sdpMLineIndex': candidate.sdpMlineIndex,
+        'sdpMid': candidate.sdpMid,
+        'candidate': candidate.candidate,
+      };
+      emitIceCandidateEvent(!(calleeId == null), iceCandidate);
     };
 
     pc.onIceConnectionState = (state) {};
@@ -424,13 +426,9 @@ class Signaling {
       RTCSessionDescription s = await pc
           .createOffer(media == 'data' ? _dc_constraints : _constraints);
       pc.setLocalDescription(s);
-      _send('offer', {
-        'to': id,
-        'from': _selfId,
-        'description': {'sdp': s.sdp, 'type': s.type},
-        'session_id': this._sessionId,
-        'media': media,
-      });
+
+      final description = {'sdp': s.sdp, 'type': s.type};
+      emitOfferEvent(id, description);
     } catch (e) {
       print(e.toString());
     }
@@ -441,21 +439,27 @@ class Signaling {
       RTCSessionDescription s = await pc
           .createAnswer(media == 'data' ? _dc_constraints : _constraints);
       pc.setLocalDescription(s);
-      _send('answer', {
-        'to': id,
-        'from': _selfId,
-        'description': {'sdp': s.sdp, 'type': s.type},
-        'session_id': this._sessionId,
-      });
+
+      final description = {'sdp': s.sdp, 'type': s.type};
+      emitAnswerEvent(description);
     } catch (e) {
       print(e.toString());
     }
   }
 
   _send(event, data) {
-    var request = new Map();
-    request["type"] = event;
-    request["data"] = data;
-    _socket.send(_encoder.convert(request));
+    _socket.send(event, data);
+  }
+
+  emitOfferEvent(peerId, description) {
+    _send(OFFER_EVENT, {'peerId': peerId, 'description': description});
+  }
+
+  emitAnswerEvent(description) {
+    _send(ANSWER_EVENT, {'description': description});
+  }
+
+  emitIceCandidateEvent(isHost, candidate) {
+    _send(ICE_CANDIDATE_EVENT, {'isHost': isHost, 'candidate': candidate});
   }
 }

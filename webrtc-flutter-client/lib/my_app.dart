@@ -48,21 +48,21 @@ Future<void> myMain() async {
   // @nhancv 10/23/2019: Init bflutter caching
   await BCache.instance.init();
   // @nhancv 10/23/2019: Run Application
-//  runApp(MyApp());
+  runApp(MyApp());
 
-  IO.Socket socket = IO.io('http://192.168.1.10:3000', <String, dynamic>{
-    'transports': ['websocket']
-  });
-  // Dart client
-  socket.on('connect', (_) {
-    print('connect');
-    socket.emit('msg', 'test');
-  });
-  socket.on('event', (data) => print(data));
-  socket.on('exception', (e) => print('Exception: $e'));
-  socket.on('connect_error', (e) => print('Connect error: $e'));
-  socket.on('disconnect', (_) => print('disconnect'));
-  socket.on('fromServer', (_) => print(_));
+//  IO.Socket socket = IO.io('http://192.168.1.10:3000', <String, dynamic>{
+//    'transports': ['websocket']
+//  });
+//  // Dart client
+//  socket.on('connect', (_) {
+//    print('connect');
+//    socket.emit('msg', 'test');
+//  });
+//  socket.on('event', (data) => print(data));
+//  socket.on('exception', (e) => print('Exception: $e'));
+//  socket.on('connect_error', (e) => print('Connect error: $e'));
+//  socket.on('disconnect', (_) => print('disconnect'));
+//  socket.on('fromServer', (_) => print(_));
 
 }
 

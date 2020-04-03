@@ -85,14 +85,14 @@ socket.on('connect', function () {
     console.log(OFFER_EVENT, description);
 
     // @nhancv 3/30/20: Create new PeerConnection
-    console.log('Created remote peer connection object ' + currentClientId);
+    console.log('Created remote peer connection object');
     createPeerConnection();
 
     // Set remote offer
-    console.log(currentClientId + ' setRemoteDescription start');
+    console.log('setRemoteDescription start');
     try {
       await peerConnection.setRemoteDescription(description);
-      onSetRemoteSuccess(peerConnection);
+      console.log(`setRemoteDescription complete`);
     } catch (e) {
       onSetSessionDescriptionError(e);
     }
@@ -105,7 +105,7 @@ socket.on('connect', function () {
       const answer = await peerConnection.createAnswer();
       await onCreateAnswerSuccess(answer);
       // @nhancv 3/30/20: Send answer to callee
-      emitAnswerEvent(calleeId, answer);
+      emitAnswerEvent(answer);
     } catch (e) {
       onCreateSessionDescriptionError(e);
     }
@@ -113,7 +113,7 @@ socket.on('connect', function () {
 
   socket.on(ANSWER_EVENT, async (description) => {
     console.log(ANSWER_EVENT, description);
-    console.log(currentClientId + ' setRemoteDescription start');
+    console.log('setRemoteDescription start');
     try {
       await peerConnection.setRemoteDescription(description);
       console.log(`setRemoteDescription complete`);
@@ -149,9 +149,9 @@ function emitOfferEvent(peerId, description) {
   }
 }
 
-function emitAnswerEvent(peerId, description) {
+function emitAnswerEvent(description) {
   if (socket && socket.connected) {
-    socket.emit(ANSWER_EVENT, {peerId: peerId, description: description})
+    socket.emit(ANSWER_EVENT, {description: description})
   }
 }
 

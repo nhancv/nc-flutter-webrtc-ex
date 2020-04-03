@@ -68,27 +68,26 @@ let currentClientId = null;
 let calleeId = null;
 
 // const socket = io('https://192.168.1.128:3000');
-const socket = io('https://localhost:3000');
-// const socket = io('http://localhost:3000');
+const socket = io('http://127.0.0.1:3000');
 socket.on('connect', function () {
   console.log('Connected');
   // @nhancv 3/30/20: Enable Start button
   startButton.disabled = false;
-  
+
   // @nhancv 3/30/20: Socket event setup
   socket.on(CLIENT_ID_EVENT, function (_clientId) {
     console.log(CLIENT_ID_EVENT, _clientId);
     currentClientId = _clientId;
     clientIdP.innerHTML = `Client ID: ${_clientId}`;
   });
-  
+
   socket.on(OFFER_EVENT, async (description) => {
     console.log(OFFER_EVENT, description);
-    
+
     // @nhancv 3/30/20: Create new PeerConnection
     console.log('Created remote peer connection object ' + currentClientId);
     createPeerConnection();
-    
+
     // Set remote offer
     console.log(currentClientId + ' setRemoteDescription start');
     try {
@@ -97,7 +96,7 @@ socket.on('connect', function () {
     } catch (e) {
       onSetSessionDescriptionError(e);
     }
-    
+
     console.log(currentClientId + ' createAnswer start');
     // Since the 'remote' side has no media stream we need
     // to pass in the right constraints in order for it to
@@ -111,7 +110,7 @@ socket.on('connect', function () {
       onCreateSessionDescriptionError(e);
     }
   });
-  
+
   socket.on(ANSWER_EVENT, async (description) => {
     console.log(ANSWER_EVENT, description);
     console.log(currentClientId + ' setRemoteDescription start');
@@ -122,7 +121,7 @@ socket.on('connect', function () {
       onSetSessionDescriptionError(e);
     }
   });
-  
+
   socket.on(ICE_CANDIDATE_EVENT, async (candidate) => {
     console.log(ICE_CANDIDATE_EVENT, candidate);
     try {
@@ -133,7 +132,7 @@ socket.on('connect', function () {
     }
     console.log(`ICE candidate:\n${candidate ? candidate.candidate : '(null)'}`);
   });
-  
+
   socket.on('exception', function (exception) {
     console.log('exception', exception);
   });
@@ -195,29 +194,29 @@ async function start() {
     if (navigator.mediaDevices === undefined) {
       navigator.mediaDevices = {};
     }
-    
+
     // Some browsers partially implement mediaDevices. We can't just assign an object
     // with getUserMedia as it would overwrite existing properties.
     // Here, we will just add the getUserMedia property if it's missing.
     if (navigator.mediaDevices.getUserMedia === undefined) {
       navigator.mediaDevices.getUserMedia = function (constraints) {
-        
+
         // First get ahold of the legacy getUserMedia, if present
         let getUserMedia = navigator.mozGetUserMedia || navigator.webkitGetUserMedia || navigator.msGetUserMedia;
-        
+
         // Some browsers just don't implement it - return a rejected promise with an error
         // to keep a consistent interface
         if (!getUserMedia) {
           return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
         }
-        
+
         // Otherwise, wrap the call to the old navigator.getUserMedia with a Promise
         return new Promise(function (resolve, reject) {
           getUserMedia.call(navigator, constraints, resolve, reject);
         });
       }
     }
-    
+
     // const constraints = { audio: true, video: true };
     const constraints = {audio: true, video: {facingMode: "user"}};
     // const constraints = {audio: true, video: {facingMode: {exact: "environment"}}};
@@ -225,12 +224,13 @@ async function start() {
     console.log('Received local stream');
     localVideo.srcObject = stream;
     localStream = stream;
-    callButton.disabled = false;
-    calleeIdInput.disabled = false;
   } catch (e) {
     alert(`getUserMedia() error: ${e.message}`);
     console.error(e);
   }
+
+  callButton.disabled = false;
+  calleeIdInput.disabled = false;
 }
 
 async function call() {
@@ -243,7 +243,7 @@ async function call() {
   console.log('Starting call');
   console.log('Created local peer connection object');
   createPeerConnection();
-  
+
   try {
     console.log('CreateOffer start');
     const offer = await peerConnection.createOffer(offerOptions);
@@ -255,22 +255,25 @@ async function call() {
 
 function createPeerConnection() {
   startTime = window.performance.now();
-  const videoTracks = localStream.getVideoTracks();
-  const audioTracks = localStream.getAudioTracks();
-  if (videoTracks.length > 0) {
-    console.log(`Using video device: ${videoTracks[0].label}`);
-  }
-  if (audioTracks.length > 0) {
-    console.log(`Using audio device: ${audioTracks[0].label}`);
-  }
+
   peerConnection = new RTCPeerConnection({});
   peerConnection.addEventListener('icecandidate', e => onIceCandidate(e));
   peerConnection.addEventListener('iceconnectionstatechange', e => onIceStateChange(e));
   peerConnection.addEventListener('track', gotRemoteStream);
-  
-  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+  if(localStream) {
+    const videoTracks = localStream.getVideoTracks();
+    const audioTracks = localStream.getAudioTracks();
+    if (videoTracks.length > 0) {
+      console.log(`Using video device: ${videoTracks[0].label}`);
+    }
+    if (audioTracks.length > 0) {
+      console.log(`Using audio device: ${audioTracks[0].label}`);
+    }
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  }
   console.log('Added local stream');
-  
+
 }
 
 function onCreateSessionDescriptionError(error) {
@@ -288,7 +291,7 @@ async function onCreateOfferSuccess(desc) {
   } catch (e) {
     onSetSessionDescriptionError(e);
   }
-  
+
 }
 
 function onSetSessionDescriptionError(error) {
@@ -310,7 +313,7 @@ async function onCreateAnswerSuccess(desc) {
   try {
     await peerConnection.setLocalDescription(desc);
     console.log(`peerConnection setLocalDescription complete`);
-  
+
   } catch (e) {
     onSetSessionDescriptionError(e);
   }

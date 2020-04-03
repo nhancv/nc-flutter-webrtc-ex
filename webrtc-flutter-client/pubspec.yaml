@@ -29,6 +29,8 @@ dependencies:
     git:
       url: git://github.com/nhancv/flutter_plugin_appcenter.git
       path: src/appcenter_analytics
+  flutter_webrtc: ^0.2.7
+  socket_io_client: ^0.9.9
 
 dev_dependencies:
   flutter_launcher_icons: ^0.7.3

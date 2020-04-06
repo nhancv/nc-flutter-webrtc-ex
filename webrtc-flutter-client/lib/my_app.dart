@@ -50,20 +50,6 @@ Future<void> myMain() async {
   // @nhancv 10/23/2019: Run Application
   runApp(MyApp());
 
-//  IO.Socket socket = IO.io('http://192.168.1.10:3000', <String, dynamic>{
-//    'transports': ['websocket']
-//  });
-//  // Dart client
-//  socket.on('connect', (_) {
-//    print('connect');
-//    socket.emit('msg', 'test');
-//  });
-//  socket.on('event', (data) => print(data));
-//  socket.on('exception', (e) => print('Exception: $e'));
-//  socket.on('connect_error', (e) => print('Connect error: $e'));
-//  socket.on('disconnect', (_) => print('disconnect'));
-//  socket.on('fromServer', (_) => print(_));
-
 }
 
 class MyApp extends StatefulWidget {
@@ -121,7 +107,6 @@ class AppContent extends StatelessWidget {
       body: Stack(
         children: <Widget>[
 //          HomeScreen(),
-//          CallSample(ip: 'demo.cloudwebrtc.com'),
           CallSample(ip: '192.168.1.10'),
           StreamBuilder(
             stream: mainBloc.appLoading.stream,

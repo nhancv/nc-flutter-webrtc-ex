@@ -58,7 +58,6 @@ class Signaling {
   JsonDecoder _decoder = new JsonDecoder();
   String _selfId = randomNumeric(6);
   SimpleWebSocket _socket;
-  var _sessionId;
   var _host;
   var _port = 3000;
   var _peerConnections = new Map<String, RTCPeerConnection>();
@@ -135,8 +134,6 @@ class Signaling {
   }
 
   void invite(String peer_id, String media, use_screen) {
-    this._sessionId = this._selfId + '-' + peer_id;
-
     if (this.onStateChange != null) {
       this.onStateChange(SignalingState.CallStateNew);
     }
@@ -151,23 +148,32 @@ class Signaling {
   }
 
   void bye() {
-    _send('bye', {
-      'session_id': this._sessionId,
-      'from': this._selfId,
+    if (_localStream != null) {
+      _localStream.dispose();
+      _localStream = null;
+    }
+
+    _peerConnections.forEach((k,v) {
+      final pc = _peerConnections[k];
+      if (pc != null) {
+        pc.close();
+      }
     });
+    if (this.onStateChange != null) {
+      this.onStateChange(SignalingState.CallStateBye);
+    }
+    _peerConnections.clear();
+    _dataChannels.clear();
+    _remoteCandidates.clear();
   }
 
   void onMessage(tag, message) async {
-    JsonDecoder decoder = new JsonDecoder();
-
     switch (tag) {
       case OFFER_EVENT:
         {
           var id = 'caller';
           var description = message;
           var media = 'call';
-          var sessionId = 'session_id';
-          this._sessionId = sessionId;
 
           if (this.onStateChange != null) {
             this.onStateChange(SignalingState.CallStateNew);
@@ -214,78 +220,6 @@ class Signaling {
               _remoteCandidates.add(candidate);
             }
           }
-        }
-        break;
-
-      case 'peers':
-        {
-          Map<String, dynamic> mapData = decoder.convert(message);
-          var data = mapData['data'];
-          List<dynamic> peers = data;
-          if (this.onPeersUpdate != null) {
-            Map<String, dynamic> event = new Map<String, dynamic>();
-            event['self'] = _selfId;
-            event['peers'] = peers;
-            this.onPeersUpdate(event);
-          }
-        }
-        break;
-      case 'leave':
-        {
-          Map<String, dynamic> mapData = decoder.convert(message);
-          var data = mapData['data'];
-          var id = data;
-          var pc = _peerConnections.remove(id);
-          _dataChannels.remove(id);
-
-          if (_localStream != null) {
-            _localStream.dispose();
-            _localStream = null;
-          }
-
-          if (pc != null) {
-            pc.close();
-          }
-          this._sessionId = null;
-          if (this.onStateChange != null) {
-            this.onStateChange(SignalingState.CallStateBye);
-          }
-        }
-        break;
-      case 'bye':
-        {
-          Map<String, dynamic> mapData = decoder.convert(message);
-          var data = mapData['data'];
-          var to = data['to'];
-          var sessionId = data['session_id'];
-          print('bye: ' + sessionId);
-
-          if (_localStream != null) {
-            _localStream.dispose();
-            _localStream = null;
-          }
-
-          var pc = _peerConnections[to];
-          if (pc != null) {
-            pc.close();
-            _peerConnections.remove(to);
-          }
-
-          var dc = _dataChannels[to];
-          if (dc != null) {
-            dc.close();
-            _dataChannels.remove(to);
-          }
-
-          this._sessionId = null;
-          if (this.onStateChange != null) {
-            this.onStateChange(SignalingState.CallStateBye);
-          }
-        }
-        break;
-      case 'keepalive':
-        {
-          print('keepalive response!');
         }
         break;
       default:

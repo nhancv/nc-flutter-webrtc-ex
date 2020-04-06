@@ -30,7 +30,6 @@ import 'package:flutter_webrtc/webrtc.dart';
 import '../../utils/device_info.dart';
 import '../../utils/turn.dart';
 import '../../utils/websocket.dart';
-import 'random_string.dart';
 
 enum SignalingState {
   CallStateNew,
@@ -56,7 +55,6 @@ typedef void DataChannelCallback(RTCDataChannel dc);
 class Signaling {
   JsonEncoder _encoder = new JsonEncoder();
   JsonDecoder _decoder = new JsonDecoder();
-  String _selfId = randomNumeric(6);
   SimpleWebSocket _socket;
   var _host;
   var _port = 3000;
@@ -73,6 +71,7 @@ class Signaling {
   StreamStateCallback onAddRemoteStream;
   StreamStateCallback onRemoveRemoteStream;
   OtherEventCallback onPeersUpdate;
+  OtherEventCallback onEventUpdate;
   DataChannelMessageCallback onDataChannelMessage;
   DataChannelCallback onDataChannel;
 
@@ -153,7 +152,7 @@ class Signaling {
       _localStream = null;
     }
 
-    _peerConnections.forEach((k,v) {
+    _peerConnections.forEach((k, v) {
       final pc = _peerConnections[k];
       if (pc != null) {
         pc.close();
@@ -222,6 +221,13 @@ class Signaling {
           }
         }
         break;
+      case CLIENT_ID_EVENT:
+        {
+          if (this.onEventUpdate != null) {
+            this.onEventUpdate({'clientId': 'Id: $message'});
+          }
+        }
+        break;
       default:
         break;
     }
@@ -258,11 +264,7 @@ class Signaling {
     _socket.onOpen = () {
       print('onOpen');
       this?.onStateChange(SignalingState.ConnectionOpen);
-      _send('new', {
-        'name': DeviceInfo.label,
-        'id': _selfId,
-        'user_agent': DeviceInfo.userAgent
-      });
+      print({'name': DeviceInfo.label, 'user_agent': DeviceInfo.userAgent});
     };
 
     _socket.onMessage = (tag, message) {
@@ -317,7 +319,12 @@ class Signaling {
       emitIceCandidateEvent(!(calleeId == null), iceCandidate);
     };
 
-    pc.onIceConnectionState = (state) {};
+    pc.onIceConnectionState = (state) {
+      print('onIceConnectionState $state');
+      if(state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
+        bye();
+      }
+    };
 
     pc.onAddStream = (stream) {
       if (this.onAddRemoteStream != null) this.onAddRemoteStream(stream);

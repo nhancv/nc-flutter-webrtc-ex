@@ -29,8 +29,8 @@ class SimpleWebSocket {
         'transports': ['websocket']
       });
       // Dart client
-      socket.on('connect', (d) {
-        print('connected $d');
+      socket.on('connect', (_) {
+        print('connected');
         onOpen();
       });
       socket.on(CLIENT_ID_EVENT, (data) {

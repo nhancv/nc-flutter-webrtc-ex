@@ -22,14 +22,18 @@
  * SOFTWARE.
  */
 
-import 'package:flutter/material.dart';
 import 'dart:core';
-import 'signaling.dart';
+
+import 'package:bflutter/bflutter.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/webrtc.dart';
+
+import 'signaling.dart';
 
 class CallSample extends StatefulWidget {
   static String tag = 'call_sample';
 
+  final clientIdBloc = BlocDefault<String>();
   final String ip;
 
   CallSample({Key key, @required this.ip}) : super(key: key);
@@ -96,6 +100,10 @@ class _CallSampleState extends State<CallSample> {
             break;
         }
       };
+
+      _signaling.onEventUpdate = ((event) {
+        widget.clientIdBloc.push(event['clientId']);
+      });
 
       _signaling.onPeersUpdate = ((event) {
         this.setState(() {
@@ -170,7 +178,16 @@ class _CallSampleState extends State<CallSample> {
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
-        title: new Text('P2P Call Sample'),
+        title: StreamBuilder(
+          initialData: 'P2P Call Sample',
+          stream: widget.clientIdBloc.stream,
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return new Text('${snapshot.data}');
+            }
+            return new Text('P2P Call Sample');
+          },
+        ),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.settings),
@@ -182,63 +199,63 @@ class _CallSampleState extends State<CallSample> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _inCalling
           ? new SizedBox(
-          width: 200.0,
-          child: new Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                FloatingActionButton(
-                  child: const Icon(Icons.switch_camera),
-                  onPressed: _switchCamera,
-                ),
-                FloatingActionButton(
-                  onPressed: _hangUp,
-                  tooltip: 'Hangup',
-                  child: new Icon(Icons.call_end),
-                  backgroundColor: Colors.pink,
-                ),
-                FloatingActionButton(
-                  child: const Icon(Icons.mic_off),
-                  onPressed: _muteMic,
-                )
-              ]))
+              width: 200.0,
+              child: new Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    FloatingActionButton(
+                      child: const Icon(Icons.switch_camera),
+                      onPressed: _switchCamera,
+                    ),
+                    FloatingActionButton(
+                      onPressed: _hangUp,
+                      tooltip: 'Hangup',
+                      child: new Icon(Icons.call_end),
+                      backgroundColor: Colors.pink,
+                    ),
+                    FloatingActionButton(
+                      child: const Icon(Icons.mic_off),
+                      onPressed: _muteMic,
+                    )
+                  ]))
           : null,
       body: _inCalling
           ? OrientationBuilder(builder: (context, orientation) {
-        return new Container(
-          child: new Stack(children: <Widget>[
-            new Positioned(
-                left: 0.0,
-                right: 0.0,
-                top: 0.0,
-                bottom: 0.0,
-                child: new Container(
-                  margin: new EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 0.0),
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height,
-                  child: new RTCVideoView(_remoteRenderer),
-                  decoration: new BoxDecoration(color: Colors.black54),
-                )),
-            new Positioned(
-              left: 20.0,
-              top: 20.0,
-              child: new Container(
-                width: orientation == Orientation.portrait ? 90.0 : 120.0,
-                height:
-                orientation == Orientation.portrait ? 120.0 : 90.0,
-                child: new RTCVideoView(_localRenderer),
-                decoration: new BoxDecoration(color: Colors.black54),
-              ),
-            ),
-          ]),
-        );
-      })
+              return new Container(
+                child: new Stack(children: <Widget>[
+                  new Positioned(
+                      left: 0.0,
+                      right: 0.0,
+                      top: 0.0,
+                      bottom: 0.0,
+                      child: new Container(
+                        margin: new EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 0.0),
+                        width: MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height,
+                        child: new RTCVideoView(_remoteRenderer),
+                        decoration: new BoxDecoration(color: Colors.black54),
+                      )),
+                  new Positioned(
+                    left: 20.0,
+                    top: 20.0,
+                    child: new Container(
+                      width: orientation == Orientation.portrait ? 90.0 : 120.0,
+                      height:
+                          orientation == Orientation.portrait ? 120.0 : 90.0,
+                      child: new RTCVideoView(_localRenderer),
+                      decoration: new BoxDecoration(color: Colors.black54),
+                    ),
+                  ),
+                ]),
+              );
+            })
           : new ListView.builder(
-          shrinkWrap: true,
-          padding: const EdgeInsets.all(0.0),
-          itemCount: (_peers != null ? _peers.length : 0),
-          itemBuilder: (context, i) {
-            return _buildRow(context, _peers[i]);
-          }),
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(0.0),
+              itemCount: (_peers != null ? _peers.length : 0),
+              itemBuilder: (context, i) {
+                return _buildRow(context, _peers[i]);
+              }),
     );
   }
 }

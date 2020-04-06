@@ -321,7 +321,8 @@ class Signaling {
 
     pc.onIceConnectionState = (state) {
       print('onIceConnectionState $state');
-      if(state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
+      if(state == RTCIceConnectionState.RTCIceConnectionStateClosed ||
+      state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
         bye();
       }
     };

@@ -11,32 +11,32 @@
   <!--  https://codelabs.developers.google.com/codelabs/webrtc-web-->
   <title>Realtime communication with WebRTC</title>
   <script src="lib/socket.io.js"></script>
-  
+
   <link rel="stylesheet" href="css/main.css"/>
 </head>
 
 <body>
 <div id="container">
-  
+
   <img src="logo.svg" width="100"/>
-  <h1>Realtime communication with WebRTC</h1>
-  
+  <h1>WebRTC</h1>
+  <p id="peerConnectionStatus"></p>
+
   <video id="localVideo" playsinline autoplay muted></video>
   <video id="remoteVideo" playsinline autoplay></video>
-  
+
   <div class="box">
     <p id="clientId"></p>
   </div>
-  
+
   <div class="box">
-    <button id="startButton">Start</button>
     <div style="display: inline;">
       <input type="text" id="calleeIdInput" placeholder="Callee Id">
       <button id="callButton">Call</button>
     </div>
     <button id="hangupButton">Hang Up</button>
   </div>
-  
+
 </div>
 </body>
 

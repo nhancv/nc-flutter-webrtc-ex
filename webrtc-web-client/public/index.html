@@ -46,22 +46,5 @@
     margin: 10px;
   }
 </style>
-<script src="device-uuid.min.js" type="text/javascript"></script>
-<script src="BrowsingModeDetector.js" type="text/javascript"></script>
-<script>
-  new BrowsingModeDetector().do((browsingInIncognitoMode, BrowsingModeDetectorInstance) => {
-    console.log('Is private?', browsingInIncognitoMode);
-    console.log('Browsing Mode:', BrowsingModeDetectorInstance.getBrowsingMode());
-
-    const uuid = new DeviceUUID().get(browsingInIncognitoMode);
-    console.log({uuid});
-
-    if (browsingInIncognitoMode) {
-      // Incognito, Private mode detected
-      return;
-    }
-    // Normal mode detected
-  });
-</script>
 </body>
 </html>

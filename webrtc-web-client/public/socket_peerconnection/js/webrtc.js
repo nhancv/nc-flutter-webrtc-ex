@@ -254,7 +254,7 @@ function onCreateSessionDescriptionError(error) {
 }
 
 async function onCreateOfferSuccess(desc) {
-    console.log(`Offer from local\n${desc}`);
+    console.log(`Offer from local`, desc);
     console.log('setLocalDescription start');
     try {
         await peerConnection.setLocalDescription(desc);
@@ -272,7 +272,7 @@ function onSetSessionDescriptionError(error) {
 }
 
 async function onCreateAnswerSuccess(desc) {
-    console.log(`Answer from peer:\n${desc}`);
+    console.log(`Answer from peer:`, desc);
     console.log('Peer setLocalDescription start');
     try {
         await peerConnection.setLocalDescription(desc);

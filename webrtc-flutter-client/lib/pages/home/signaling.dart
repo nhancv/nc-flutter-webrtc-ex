@@ -58,11 +58,10 @@ class Signaling {
   SimpleWebSocket _socket;
   var _host;
   var _port = 3000;
-  var _peerConnections = new Map<String, RTCPeerConnection>();
-  var _dataChannels = new Map<String, RTCDataChannel>();
+  RTCPeerConnection peerConnection;
+  RTCDataChannel dataChannel;
   var _remoteCandidates = [];
   var _turnCredential;
-  String calleeId;
 
   MediaStream _localStream;
   List<MediaStream> _remoteStreams;
@@ -120,9 +119,9 @@ class Signaling {
       _localStream = null;
     }
 
-    _peerConnections.forEach((key, pc) {
-      pc.close();
-    });
+    if(peerConnection != null) {
+      peerConnection.close();
+    }
     if (_socket != null) _socket.close();
   }
 
@@ -137,8 +136,8 @@ class Signaling {
       this.onStateChange(SignalingState.CallStateNew);
     }
 
-    _createPeerConnection(peer_id, media, use_screen).then((pc) {
-      _peerConnections[peer_id] = pc;
+    _createPeerConnection(peer_id, media, use_screen, isHost: true).then((pc) {
+      peerConnection = pc;
       if (media == 'data') {
         _createDataChannel(peer_id, pc);
       }
@@ -152,17 +151,16 @@ class Signaling {
       _localStream = null;
     }
 
-    _peerConnections.forEach((k, v) {
-      final pc = _peerConnections[k];
-      if (pc != null) {
-        pc.close();
-      }
-    });
+    if(dataChannel != null) {
+      dataChannel.close();
+    }
+    if(peerConnection != null) {
+      peerConnection.close();
+    }
+
     if (this.onStateChange != null) {
       this.onStateChange(SignalingState.CallStateBye);
     }
-    _peerConnections.clear();
-    _dataChannels.clear();
     _remoteCandidates.clear();
   }
 
@@ -179,7 +177,7 @@ class Signaling {
           }
 
           var pc = await _createPeerConnection(id, media, false);
-          _peerConnections[id] = pc;
+          peerConnection = pc;
           await pc.setRemoteDescription(new RTCSessionDescription(
               description['sdp'], description['type']));
           await _createAnswer(id, pc, media);
@@ -193,10 +191,8 @@ class Signaling {
         break;
       case ANSWER_EVENT:
         {
-          var id = 'callee';
           var description = message;
-
-          var pc = _peerConnections[id];
+          var pc = peerConnection;
           if (pc != null) {
             await pc.setRemoteDescription(new RTCSessionDescription(
                 description['sdp'], description['type']));
@@ -205,10 +201,9 @@ class Signaling {
         break;
       case ICE_CANDIDATE_EVENT:
         {
-          var id = 'caller';
           var candidateMap = message;
           if (candidateMap != null) {
-            var pc = _peerConnections[id];
+            var pc = peerConnection;
             RTCIceCandidate candidate = new RTCIceCandidate(
                 candidateMap['candidate'],
                 candidateMap['sdpMid'],
@@ -306,7 +301,7 @@ class Signaling {
     return stream;
   }
 
-  _createPeerConnection(id, media, user_screen) async {
+  _createPeerConnection(id, media, user_screen, {isHost = false}) async {
     if (media != 'data') _localStream = await createStream(media, user_screen);
     RTCPeerConnection pc = await createPeerConnection(_iceServers, _config);
     if (media != 'data') pc.addStream(_localStream);
@@ -316,7 +311,7 @@ class Signaling {
         'sdpMid': candidate.sdpMid,
         'candidate': candidate.candidate,
       };
-      emitIceCandidateEvent(!(calleeId == null), iceCandidate);
+      emitIceCandidateEvent(isHost, iceCandidate);
     };
 
     pc.onIceConnectionState = (state) {
@@ -352,7 +347,7 @@ class Signaling {
       if (this.onDataChannelMessage != null)
         this.onDataChannelMessage(channel, data);
     };
-    _dataChannels[id] = channel;
+    dataChannel = channel;
 
     if (this.onDataChannel != null) this.onDataChannel(channel);
   }

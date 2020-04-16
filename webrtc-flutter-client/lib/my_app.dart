@@ -107,7 +107,7 @@ class AppContent extends StatelessWidget {
       body: Stack(
         children: <Widget>[
 //          HomeScreen(),
-          CallSample(ip: '192.168.1.10'),
+          CallSample(ip: '192.168.1.247'),
           StreamBuilder(
             stream: mainBloc.appLoading.stream,
             builder: (context, snapshot) =>

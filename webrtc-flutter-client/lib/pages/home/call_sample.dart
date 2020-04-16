@@ -44,12 +44,12 @@ class CallSample extends StatefulWidget {
 
 class _CallSampleState extends State<CallSample> {
   Signaling _signaling;
-  List<dynamic> _peers;
   var _selfId;
   RTCVideoRenderer _localRenderer = new RTCVideoRenderer();
   RTCVideoRenderer _remoteRenderer = new RTCVideoRenderer();
   bool _inCalling = false;
   final String serverIP;
+  final TextEditingController textEditingController = TextEditingController();
 
   _CallSampleState({Key key, @required this.serverIP});
 
@@ -108,7 +108,6 @@ class _CallSampleState extends State<CallSample> {
       _signaling.onPeersUpdate = ((event) {
         this.setState(() {
           _selfId = event['self'];
-          _peers = event['peers'];
         });
       });
 
@@ -249,13 +248,23 @@ class _CallSampleState extends State<CallSample> {
                 ]),
               );
             })
-          : new ListView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(0.0),
-              itemCount: (_peers != null ? _peers.length : 0),
-              itemBuilder: (context, i) {
-                return _buildRow(context, _peers[i]);
-              }),
+          : Container(
+        color: Colors.yellow,
+        child: Column(
+          children: <Widget>[
+            TextField(
+              controller: textEditingController,
+            ),
+            FlatButton(
+              child: Text('Call'),
+              color: Colors.green,
+              onPressed: () {
+                _invitePeer(context, textEditingController.text, false);
+              },
+            )
+          ],
+        ),
+      ),
     );
   }
 }

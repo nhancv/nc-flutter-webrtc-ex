@@ -263,7 +263,7 @@ class Signaling {
     };
 
     _socket.onMessage = (tag, message) {
-      print('Recivied data: $tag - $message');
+      print('Received data: $tag - $message');
       this.onMessage(tag, message);
     };
 

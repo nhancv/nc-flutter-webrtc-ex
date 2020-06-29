@@ -27,9 +27,9 @@ import 'dart:convert';
 
 import 'package:flutter_webrtc/webrtc.dart';
 
-import '../../utils/device_info.dart';
-import '../../utils/turn.dart';
-import '../../utils/websocket.dart';
+import 'device_info.dart';
+import 'turn.dart';
+import 'websocket.dart';
 
 enum SignalingState {
   CallStateNew,
@@ -53,8 +53,8 @@ typedef void DataChannelMessageCallback(
 typedef void DataChannelCallback(RTCDataChannel dc);
 
 class Signaling {
-  JsonEncoder _encoder = new JsonEncoder();
-  JsonDecoder _decoder = new JsonDecoder();
+  JsonEncoder _encoder = JsonEncoder();
+  JsonDecoder _decoder = JsonDecoder();
   SimpleWebSocket _socket;
   var _host;
   var _port = 3000;
@@ -178,7 +178,7 @@ class Signaling {
 
           var pc = await _createPeerConnection(id, media, false);
           peerConnection = pc;
-          await pc.setRemoteDescription(new RTCSessionDescription(
+          await pc.setRemoteDescription(RTCSessionDescription(
               description['sdp'], description['type']));
           await _createAnswer(id, pc, media);
           if (this._remoteCandidates.length > 0) {
@@ -194,7 +194,7 @@ class Signaling {
           var description = message;
           var pc = peerConnection;
           if (pc != null) {
-            await pc.setRemoteDescription(new RTCSessionDescription(
+            await pc.setRemoteDescription(RTCSessionDescription(
                 description['sdp'], description['type']));
           }
         }
@@ -204,7 +204,7 @@ class Signaling {
           var candidateMap = message;
           if (candidateMap != null) {
             var pc = peerConnection;
-            RTCIceCandidate candidate = new RTCIceCandidate(
+            RTCIceCandidate candidate = RTCIceCandidate(
                 candidateMap['candidate'],
                 candidateMap['sdpMid'],
                 candidateMap['sdpMLineIndex']);
@@ -353,7 +353,7 @@ class Signaling {
   }
 
   _createDataChannel(id, RTCPeerConnection pc, {label: 'fileTransfer'}) async {
-    RTCDataChannelInit dataChannelDict = new RTCDataChannelInit();
+    RTCDataChannelInit dataChannelDict = RTCDataChannelInit();
     RTCDataChannel channel = await pc.createDataChannel(label, dataChannelDict);
     _addDataChannel(id, channel);
   }

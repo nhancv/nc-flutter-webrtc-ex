@@ -1,8 +1,3 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-import 'dart:math';
-
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 typedef void OnMessageCallback(String tag, dynamic msg);
@@ -67,5 +62,4 @@ class SimpleWebSocket {
   close() {
     if (socket != null) socket.close();
   }
-
 }

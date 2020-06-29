@@ -11,7 +11,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   cupertino_icons: ^0.1.2
-  flutter_webrtc: 0.2.7
+  flutter_webrtc: ^0.2.8
   socket_io_client: ^0.9.9
   provider: ^4.1.3
 

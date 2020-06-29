@@ -23,10 +23,10 @@
  */
 
 import 'package:nft/my_app.dart';
-import 'package:nft/provider/global.dart' as global;
+import 'package:nft/app_config.dart';
 
 void main() async {
-  //init dev Global
-  global.Global(environment: global.Env.dev());
+  // Init dev global
+  Config(environment: Env.dev());
   await myMain();
 }

@@ -115,9 +115,9 @@ class _CallBodyState extends State<CallBody> {
     }
   }
 
-  _invitePeer(context, peerId, use_screen) async {
+  _invitePeer(context, peerId, useScreen) async {
     if (_signaling != null && peerId != _selfId) {
-      _signaling.invite(peerId, 'video', use_screen);
+      _signaling.invite(peerId, 'video', useScreen);
     }
   }
 
@@ -132,36 +132,6 @@ class _CallBodyState extends State<CallBody> {
   }
 
   _muteMic() {}
-
-  _buildRow(context, peer) {
-    var self = (peer['id'] == _selfId);
-    return ListBody(children: <Widget>[
-      ListTile(
-        title: Text(self
-            ? peer['name'] + '[Your self]'
-            : peer['name'] + '[' + peer['user_agent'] + ']'),
-        onTap: null,
-        trailing: SizedBox(
-            width: 100.0,
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  IconButton(
-                    icon: const Icon(Icons.videocam),
-                    onPressed: () => _invitePeer(context, peer['id'], false),
-                    tooltip: 'Video calling',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.screen_share),
-                    onPressed: () => _invitePeer(context, peer['id'], true),
-                    tooltip: 'Screen sharing',
-                  )
-                ])),
-        subtitle: Text('id: ' + peer['id']),
-      ),
-      Divider()
-    ]);
-  }
 
   @override
   Widget build(BuildContext context) {

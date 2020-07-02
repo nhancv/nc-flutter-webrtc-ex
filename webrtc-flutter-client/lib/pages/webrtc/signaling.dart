@@ -23,7 +23,6 @@
  */
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter_webrtc/webrtc.dart';
 
@@ -53,8 +52,6 @@ typedef void DataChannelMessageCallback(
 typedef void DataChannelCallback(RTCDataChannel dc);
 
 class Signaling {
-  JsonEncoder _encoder = JsonEncoder();
-  JsonDecoder _decoder = JsonDecoder();
   SimpleWebSocket _socket;
   var _host;
   var _port = 3000;
@@ -103,7 +100,7 @@ class Signaling {
     'optional': [],
   };
 
-  final Map<String, dynamic> _dc_constraints = {
+  final Map<String, dynamic> _dcConstraints = {
     'mandatory': {
       'OfferToReceiveAudio': false,
       'OfferToReceiveVideo': false,
@@ -131,17 +128,17 @@ class Signaling {
     }
   }
 
-  void invite(String peer_id, String media, use_screen) {
+  void invite(String peerId, String media, useScreen) {
     if (this.onStateChange != null) {
       this.onStateChange(SignalingState.CallStateNew);
     }
 
-    _createPeerConnection(peer_id, media, use_screen, isHost: true).then((pc) {
+    _createPeerConnection(peerId, media, useScreen, isHost: true).then((pc) {
       peerConnection = pc;
       if (media == 'data') {
-        _createDataChannel(peer_id, pc);
+        _createDataChannel(peerId, pc);
       }
-      _createOffer(peer_id, pc, media);
+      _createOffer(peerId, pc, media);
     });
   }
 
@@ -277,7 +274,7 @@ class Signaling {
     await _socket.connect();
   }
 
-  Future<MediaStream> createStream(media, user_screen) async {
+  Future<MediaStream> createStream(media, userScreen) async {
     final Map<String, dynamic> mediaConstraints = {
       'audio': true,
       'video': {
@@ -292,7 +289,7 @@ class Signaling {
       }
     };
 
-    MediaStream stream = user_screen
+    MediaStream stream = userScreen
         ? await navigator.getDisplayMedia(mediaConstraints)
         : await navigator.getUserMedia(mediaConstraints);
     if (this.onLocalStream != null) {
@@ -301,8 +298,8 @@ class Signaling {
     return stream;
   }
 
-  _createPeerConnection(id, media, user_screen, {isHost = false}) async {
-    if (media != 'data') _localStream = await createStream(media, user_screen);
+  _createPeerConnection(id, media, userScreen, {isHost = false}) async {
+    if (media != 'data') _localStream = await createStream(media, userScreen);
     RTCPeerConnection pc = await createPeerConnection(_iceServers, _config);
     if (media != 'data') pc.addStream(_localStream);
     pc.onIceCandidate = (candidate) {
@@ -361,7 +358,7 @@ class Signaling {
   _createOffer(String id, RTCPeerConnection pc, String media) async {
     try {
       RTCSessionDescription s = await pc
-          .createOffer(media == 'data' ? _dc_constraints : _constraints);
+          .createOffer(media == 'data' ? _dcConstraints : _constraints);
       pc.setLocalDescription(s);
 
       final description = {'sdp': s.sdp, 'type': s.type};
@@ -374,7 +371,7 @@ class Signaling {
   _createAnswer(String id, RTCPeerConnection pc, media) async {
     try {
       RTCSessionDescription s = await pc
-          .createAnswer(media == 'data' ? _dc_constraints : _constraints);
+          .createAnswer(media == 'data' ? _dcConstraints : _constraints);
       pc.setLocalDescription(s);
 
       final description = {'sdp': s.sdp, 'type': s.type};
